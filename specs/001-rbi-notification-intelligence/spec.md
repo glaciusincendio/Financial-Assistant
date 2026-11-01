@@ -1,302 +1,149 @@
-# Feature Specification: RBI Notification Intelligence
+# Feature Specification: Monthly RBI Q&A Chatbot
 
 **Feature Branch**: `001-rbi-notification-intelligence`
 
-**Created**: 2026-10-30
+**Created**: 2026-11-01
 
 **Status**: Draft
 
-**Input**: User description: "Develop Financial Assistant, that should abe able to
-interpret monthly RBI notifications and it should also be able to identify the topic,
-context, questions and answers related to th data being used in database. Data would be
-of the form pdfs and tabular data. The model will use an open source LLM model that
-should be interchangeable and vector DB as well. All concepts from a learning point
-should be explained in detail as well."
-
-## Clarifications
-
-### Session 2026-10-31
-
-- Q: When the answer is not supported by the indexed data, should the assistant
-  provide only general, non-personalized market education, or personalized investment
-  recommendations? → A: General, non-personalized market commentary and educational
-  explanations only; no personalized investment recommendations.
-- Q: What information may the assistant use to describe current market conditions when
-  an answer is not found in the indexed RBI data? → A: Only maintainer-approved,
-  indexed market reports and tables, with dates and source attribution.
-- Q: Where should the project run initially, and what is the status of Docker and
-  Kubernetes? → A: Run locally on localhost for now; keep Docker and Kubernetes as
-  future enhancements outside the initial delivery scope.
-- Q: Should current-market educational commentary use a fixed freshness window for
-  approved indexed sources? → A: No fixed window; a maintainer determines whether an
-  approved indexed source is sufficiently current.
-- Q: When approved sources disagree, how should the assistant select supporting
-  evidence? → A: Prefer the source with the highest retrieval score.
-- Q: What language and accessibility baseline should the initial localhost experience
-  provide? → A: English-first with basic accessibility support; additional languages
-  and advanced accessibility are future enhancements.
+**Input**: User description: "Build a simple chatbot that answers questions using a monthly repository of RBI notifications, policy documents, and tabular data. The repository is maintained manually in the backend each month, and no action is needed from the user to refresh it. The chatbot must understand which files are relevant to each question, use semantic matching and RAG-style retrieval, consider terminology differences or synonyms, and ask for clarification when a question is ambiguous or missing needed context. It should answer with evidence from the correct source files and explain the reasoning in a beginner-friendly way. The UI should be a simple web chat interface, ideally Streamlit or another lightweight framework, and the code should stay straightforward and easy to understand."
 
 ## User Scenarios & Testing *(mandatory)*
 
-### User Story 1 - Understand a Monthly RBI Notification (Priority: P1)
+### User Story 1 - Ask a Question and Get a Grounded Answer (Priority: P1)
 
-As a learner or financial researcher, I want to select a monthly RBI notification and
-receive a concise explanation of its topics, context, important entities, dates, and
-implications so that I can understand the source without reading every page first.
+As a learner, analyst, or researcher, I want to ask a question about RBI notifications or related source files so that I can get a direct answer based on the right documents.
 
-**Why this priority**: Interpreting the source corpus is the primary value of the
-Financial Assistant and provides a useful standalone demonstration.
+**Why this priority**: This is the core value of the chatbot: turning a monthly repository of policy and reporting data into an answerable knowledge base.
 
-**Independent Test**: Provide a representative RBI notification and verify that a user
-can open its summary, inspect identified topics and context, and trace each important
-claim back to the source.
+**Independent Test**: Load a small monthly repository, ask a known-answer question, and verify that the chatbot returns the answer along with the relevant document or table and clear support.
 
 **Acceptance Scenarios**:
 
-1. **Given** an indexed monthly notification, **When** the user opens it, **Then** the
-   assistant displays the notification month, source identity, a plain-language
-   summary, identified topics, and relevant context.
-2. **Given** a notification containing multiple topics, **When** the assistant analyzes
-   it, **Then** each topic is listed with the supporting source location and the
-   assistant does not merge unrelated topics into one explanation.
-3. **Given** a source that is incomplete, unreadable, or unavailable, **When** the user
-   requests an interpretation, **Then** the assistant identifies the limitation and
-   does not present unsupported conclusions as facts.
+1. **Given** a question that matches a fact in the indexed monthly documents, **When** the user submits the question, **Then** the chatbot identifies the relevant source files and returns a grounded answer with supporting evidence.
+2. **Given** a question that requires information from multiple documents or a document plus tabular data, **When** the user asks it, **Then** the chatbot gathers the relevant evidence and explains which part of the answer comes from which source.
+3. **Given** a question that is not supported by the indexed repository, **When** the user asks it, **Then** the chatbot says the answer is not available from the current dataset and avoids presenting unsupported claims as facts.
 
 ---
 
-### User Story 2 - Ask Questions Across the Knowledge Base (Priority: P1)
+### User Story 2 - Handle Different Terminology and Semantic Similarity (Priority: P1)
 
-As a learner or researcher, I want to ask questions about RBI notifications and related
-tabular data so that I can find relevant answers without knowing which document or
-data table contains them.
+As a user, I want to ask the same question using different words, shorthand, or related terms so that I can find relevant information even when the terminology is not identical to the source files.
 
-**Why this priority**: Question answering turns the indexed information into an
-interactive assistant and directly tests retrieval, context handling, and answer
-grounding.
+**Why this priority**: Real documentation often uses variant terminology, and semantic retrieval is essential for the bot to find the correct document rather than a misleading one.
 
-**Independent Test**: Load a small set of notifications and tables, ask a set of
-known-answer questions, and verify that answers include supporting sources, identify
-uncertainty, and distinguish between document facts and table values.
+**Independent Test**: Ask a question using alternate language or synonyms and verify that the system retrieves the correct month and source document by meaning rather than exact string match alone.
 
 **Acceptance Scenarios**:
 
-1. **Given** indexed PDFs and tabular records, **When** the user asks a question about
-   a known fact, **Then** the assistant returns a direct answer with the relevant
-   source document or table and location.
-2. **Given** a question that requires information from more than one source, **When**
-   the user submits it, **Then** the assistant combines the relevant context and
-   identifies which source supports each part of the answer.
-3. **Given** a question outside the indexed data, **When** the user submits it, **Then**
-   the assistant says that the answer is not available from the current data and either
-   offers clearly labeled, general market education or suggests what information would
-   be needed, without recommending a specific action for the user.
-4. **Given** a question asks about current market conditions and approved market reports
-   or tables are indexed, **When** the user submits it, **Then** the assistant uses
-   those sources, displays their dates and attribution, and labels the result as
-   general education.
+1. **Given** a question that uses a synonym or alternative wording, **When** the user asks it, **Then** the chatbot identifies semantically related source content and retrieves the matching document.
+2. **Given** a question that could match more than one document or concept, **When** the user asks it, **Then** the chatbot chooses the most relevant source or asks a clarifying question to reduce ambiguity.
+3. **Given** terminology differences across months or source types, **When** the user queries the repository, **Then** the chatbot still maps the wording to the correct concept and source.
 
 ---
 
-### User Story 3 - Learn How the Assistant Works (Priority: P2)
+### User Story 3 - Ask for Clarification When the User’s Intent Is Ambiguous (Priority: P1)
 
-As a learner, I want each result to explain the concepts and reasoning steps involved
-in preparing data, identifying topics, retrieving context, and producing an answer so
-that I can understand Agentic AI rather than only consume the final response.
+As a user, I want the chatbot to ask a clarifying question when my request is missing context or could reasonably refer to multiple documents so that the answer stays accurate and useful.
 
-**Why this priority**: Detailed explanations are a core project goal and make the
-application demonstrable as a learning resource.
+**Why this priority**: Correctness is more important than guessing. A good agent should recognize when it needs more information before answering.
 
-**Independent Test**: Complete one ingestion, one notification interpretation, and one
-question-answering flow, then verify that each flow exposes a clear explanation of its
-stages, inputs, outputs, and limitations.
+**Independent Test**: Submit ambiguous or underspecified questions and verify that the bot either asks a clarifying question or clearly states what information is needed.
 
 **Acceptance Scenarios**:
 
-1. **Given** a completed analysis, **When** the user opens its learning explanation,
-   **Then** the assistant describes the purpose and result of each major stage in
-   language suitable for a beginner.
-2. **Given** an answer supported by multiple sources, **When** the user inspects the
-   explanation, **Then** the assistant shows how the question was connected to relevant
-   context without claiming access to private or hidden reasoning.
-3. **Given** a configurable language model or retrieval provider, **When** the provider
-   is changed, **Then** the user-facing concepts, source attribution, and answer
-   contract remain consistent.
+1. **Given** a vague question that could refer to multiple months, topics, or documents, **When** the user asks it, **Then** the chatbot asks a targeted clarification question instead of answering with a likely but wrong interpretation.
+2. **Given** a question with missing date, entity, or document reference, **When** the user submits it, **Then** the chatbot identifies the missing detail and requests only the necessary clarification.
+3. **Given** enough information to answer confidently, **When** the user asks the question, **Then** the chatbot answers directly without unnecessary back-and-forth.
 
 ---
 
-### User Story 4 - Add and Review Source Data (Priority: P2)
+### User Story 4 - Maintain a Monthly Repository Without User Action (Priority: P2)
 
-As a maintainer, I want to add monthly PDFs and tabular datasets, review their
-processing status, and identify errors so that the knowledge base stays current and
-trustworthy.
+As a maintainer, I want to update the dataset manually each month in the backend so that the chatbot automatically uses the latest repository without any extra user workflow.
 
-**Why this priority**: Reliable source preparation is necessary for useful answers and
-provides a separate ingestion demo.
+**Why this priority**: Keeping the repository current should be operationally simple and not burden the end user.
 
-**Independent Test**: Add representative PDF and tabular files, confirm their metadata
-and processing status, and verify that valid content becomes searchable while invalid
-content reports an actionable failure.
+**Independent Test**: Add or replace a month’s source files in the data repository and verify that the chatbot uses the updated set without users needing to reconfigure anything.
 
 **Acceptance Scenarios**:
 
-1. **Given** a valid PDF or tabular dataset with month and source metadata, **When** a
-   maintainer adds it, **Then** the system records the metadata and makes its usable
-   content available for later analysis.
-2. **Given** a duplicate source, **When** a maintainer adds it again, **Then** the
-   system identifies the duplicate and avoids creating conflicting copies.
-3. **Given** a malformed, empty, or unsupported file, **When** a maintainer adds it,
-   **Then** the system reports the reason, preserves the existing knowledge base, and
-   provides a corrective action.
+1. **Given** a new month of RBI data has been added to the backend repository, **When** the user asks a question about it, **Then** the chatbot uses the updated repository automatically.
+2. **Given** a duplicate or conflicting source file, **When** the maintainer adds it, **Then** the system records the correct source and avoids creating conflicting searchable copies.
+3. **Given** a missing or malformed file in the monthly data repository, **When** the system indexes it, **Then** it reports the issue clearly without breaking the rest of the knowledge base.
+
+---
+
+### User Story 5 - Use a Simple, Understandable Chat Interface (Priority: P2)
+
+As a user, I want a simple chat interface with clear responses and visible evidence so that I can interact with the assistant without needing a complex technical workflow.
+
+**Why this priority**: The project is meant to be educational and easy to understand, so the interface should be approachable and readable.
+
+**Independent Test**: Open the app, ask a question, and verify that the response, evidence, and explanation are readable and understandable to a beginner.
+
+**Acceptance Scenarios**:
+
+1. **Given** the chatbot is opened in a browser, **When** the user asks a question, **Then** the interface displays the answer, relevant sources, and a clear explanation of how the answer was derived.
+2. **Given** the app is using a lightweight framework such as Streamlit, **When** the user interacts with it, **Then** the interface remains simple, responsive, and easy to follow.
 
 ### Edge Cases
 
-- A PDF contains scanned pages, tables, multiple languages, or text in an unusual
-  reading order.
-- A table has missing values, inconsistent column names, mixed units, or duplicate rows.
-- A notification month is missing, invalid, or conflicts with the source publication
-  date.
-- Two sources disagree about a value or interpretation; the system uses the highest
-  retrieval score to select supporting evidence and should make the conflict visible.
-- A question refers to a topic, date, or entity that appears under multiple names.
-- A source is removed or replaced after answers have already been generated.
-- Indexed market-condition data is stale or no approved market-condition source is
-  available.
-- The selected model or retrieval provider is unavailable during analysis.
-- A user requests personalized financial advice or a prediction; the assistant
-  declines the personalized recommendation and may provide clearly labeled,
-  non-personalized market education instead.
-- The initial interface uses English-first content, keyboard-accessible controls,
-  readable labels, and clear status and error text; additional languages and advanced
-  accessibility features are future enhancements.
+- A question uses a different term, abbreviation, or common-language variant instead of the exact document wording.
+- More than one monthly document could plausibly answer the question.
+- The user asks about a month or topic that is missing from the repository.
+- A file is malformed, duplicate, or outdated compared to the current monthly set.
+- The same concept appears in both tabular data and PDF text with different wording.
+- The user asks for personalized financial advice rather than a document-based explanation.
+- A retrieval step finds a weak or incomplete match, and the system must avoid overconfident answers.
+- The chatbot encounters provider or indexing failure and must fail safely with a clear error.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The system MUST accept RBI notification content in PDF form and related
-  data in tabular form.
-- **FR-002**: The system MUST record source identity, publication or reporting month,
-  file type, ingestion status, and processing errors for every submitted source.
-- **FR-003**: The system MUST validate, normalize, and make searchable the usable
-  content of accepted PDFs and tabular data without silently discarding records.
-- **FR-004**: The system MUST identify topics, named entities, dates, and contextual
-  relationships in each monthly notification.
-- **FR-005**: The system MUST provide a plain-language notification summary that
-  distinguishes source facts, derived values, and unresolved uncertainty.
-- **FR-006**: The system MUST allow users to ask natural-language questions about the
-  indexed sources.
-- **FR-007**: The system MUST answer questions using relevant indexed context and MUST
-  identify the supporting document, table, and source location for material claims.
-- **FR-008**: The system MUST indicate when the indexed data is insufficient,
-  conflicting, stale, or unrelated to the user's question, MUST make detected
-  conflicts visible, and MUST not present an unsupported answer as an indexed fact.
-- **FR-008a**: When providing general market-condition commentary outside the RBI
-  notification corpus, the system MUST use only maintainer-approved indexed market
-  reports or tables, display their dates and source attribution, and state when the
-  maintainer has not approved any source as sufficiently current.
-- **FR-009**: The system MUST support questions requiring information from multiple
-  documents or from both document and tabular sources.
-- **FR-010**: The system MUST prevent duplicate source records from producing
-  conflicting searchable copies.
-- **FR-011**: The system MUST allow the configured language model provider to be
-  replaced without changing the user-facing question, answer, attribution, and
-  explanation contract.
-- **FR-012**: The system MUST allow the configured retrieval or vector-store provider
-  to be replaced without requiring users to change how they search or ask questions.
-- **FR-013**: The system MUST expose an educational explanation for ingestion, topic
-  identification, context retrieval, answer generation, source attribution, and
-  uncertainty handling.
-- **FR-014**: The system MUST distinguish educational information from personalized
-  financial advice, MUST not provide personalized investment recommendations, and MUST
-  clearly label any general market commentary as educational information rather than
-  advice.
-- **FR-015**: The system MUST protect secrets and sensitive data from source content,
-  logs, explanations, and generated answers unless explicitly required and authorized.
-- **FR-016**: The system MUST provide actionable status and error information for
-  incomplete processing, unavailable providers, and failed analyses.
-- **FR-017**: The initial interface MUST provide English-first content, keyboard-
-  accessible controls, readable labels, and clear status and error text.
+- **FR-001**: The system MUST maintain a monthly repository of RBI-related documents and tabular data that is updated manually in the backend without requiring end-user action.
+- **FR-002**: The system MUST accept and index PDF documents and tabular data from the monthly repository while preserving source metadata, month, and document identity.
+- **FR-003**: The system MUST support natural-language questions about the indexed repository and return answers grounded in the relevant source files.
+- **FR-004**: The system MUST identify which document, table, or section is relevant to a question before answering.
+- **FR-005**: The system MUST use semantic retrieval and/or RAG-style retrieval so that questions with different wording or related terminology can still map to the correct document.
+- **FR-006**: The system MUST handle synonym, shorthand, and terminology differences by matching questions to the correct source semantics rather than only exact text matches.
+- **FR-007**: The system MUST ask a clarifying question when the user’s request is ambiguous, missing the key reference point, or could plausibly match multiple sources.
+- **FR-008**: The system MUST clearly attribute material claims to supporting documents, tables, or source locations so users can inspect the underlying evidence.
+- **FR-009**: The system MUST combine evidence from multiple files or sources when the answer requires more than one reference.
+- **FR-010**: The system MUST indicate when the indexed repository does not contain enough information to answer a question and MUST avoid making unsupported claims.
+- **FR-011**: The system MUST distinguish educational explanation from personalized financial advice and MUST not provide personalized recommendations.
+- **FR-012**: The system MUST preserve duplicate detection and source provenance so the knowledge base does not contain conflicting or repeated copies of the same file.
+- **FR-013**: The system MUST expose an educational explanation of how the answer was found, what documents were retrieved, and why a source was considered relevant.
+- **FR-014**: The system MUST provide a simple browser-based chat interface suitable for local use, such as a Streamlit app or an equivalent lightweight front end.
+- **FR-015**: The system MUST keep the overall implementation simple, readable, and easy to understand for learning and demonstration purposes.
+- **FR-016**: The system MUST fail safely when a source file, retrieval step, or provider is unavailable, and MUST surface the problem clearly without breaking the rest of the workflow.
 
-### Key Entities
+### Key Entities *(include if feature involves data)*
 
-- **Source Document**: An RBI notification or related PDF, including identity,
-  publication month, source location, content status, and provenance.
-- **Tabular Dataset**: Structured records associated with one or more sources,
-  including column definitions, units, reporting period, and validation status.
-- **Topic**: A normalized subject identified in a source, with supporting passages or
-  records and related entities.
-- **Context Segment**: A traceable passage, table row, or group of records used to
-  support an analysis or answer.
-- **Question**: A user's natural-language request, including its interpreted topic,
-  time scope, and requested answer type where identifiable.
-- **Answer**: A response grounded in one or more context segments, with source
-  attribution, uncertainty, and educational explanation.
-- **Processing Run**: A record of an ingestion or analysis attempt, including status,
-  inputs, outputs, warnings, and errors.
-- **Provider Configuration**: The active language-model and retrieval-provider
-  selection, including its compatibility status and replacement boundary.
+- **Source Repository**: The monthly collection of RBI-related documents and tables maintained by the backend team.
+- **Source File**: A PDF, table, or other indexed document that belongs to a specific month and has provenance metadata.
+- **Question**: A user query that may include synonyms, ambiguous references, or missing context.
+- **Retrieved Evidence**: The documents and segments selected by the retrieval layer as relevant to the question.
+- **Clarification Request**: A follow-up question used when the user’s request is underspecified or could refer to multiple documents.
+- **Answer**: A grounded response built from the retrieved evidence, with relevant citations and explanation.
+- **User Interface**: The simple chat view through which the user submits questions and receives answers.
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: For a supported monthly notification, at least 90% of benchmark topics
-  and publication dates are identified correctly by reviewer-verified evaluation.
-- **SC-002**: At least 90% of benchmark questions with answers present in the indexed
-  data receive an answer containing the correct supporting source.
-- **SC-003**: 100% of evaluated answers that lack sufficient evidence explicitly state
-  that the available data is insufficient instead of inventing an answer, and 100% of
-  evaluated conflicting answers identify the selected highest-scoring source and the
-  presence of competing evidence.
-- **SC-004**: A learner can complete source ingestion, notification interpretation,
-  and one question-answering exercise within 30 minutes using the educational
-  explanations.
-- **SC-005**: At least 80% of first-time learners completing a guided evaluation can
-  correctly describe the purpose of ingestion, retrieval, source attribution, and
-  uncertainty handling.
-- **SC-006**: A maintainer can identify the status and corrective action for a failed
-  source-processing run within 2 minutes.
-- **SC-007**: Replacing the active language-model or retrieval provider preserves the
-  required answer fields and source-attribution behavior across the provider
-  compatibility evaluation.
-- **SC-008**: For a benchmark corpus of 100 monthly notifications and 10,000 tabular
-  records, 95% of supported questions return an initial response within 10 seconds
-  under normal operating conditions.
-- **SC-009**: 100% of evaluated out-of-corpus questions receive either an explicit
-  insufficiency statement or clearly labeled general market education, and none
-  contains a personalized buy, sell, or hold recommendation.
-- **SC-010**: 100% of evaluated market-condition explanations identify the dated
-  approved source used, or explicitly state that the maintainer has not approved any
-  source as sufficiently current.
-- **SC-011**: A learner can start and use the initial feature on localhost using the
-  documented local setup without requiring Docker or Kubernetes.
-- **SC-012**: 100% of evaluated primary workflows expose keyboard-accessible controls,
-  readable labels, and clear status or error text in English.
+- **SC-001**: Users can submit natural-language questions and receive answers grounded in the repository with clear supporting documents or locations.
+- **SC-002**: At least 90% of benchmark questions against the indexed monthly repository are answered with the correct source context when the answer exists in the data.
+- **SC-003**: Ambiguous questions trigger a clarification request rather than a guessed answer in the cases where multiple relevant sources are possible.
+- **SC-004**: The chatbot surfaces source attribution for material claims and indicates when the answer is unsupported by the current repository.
+- **SC-005**: Maintainers can add or update monthly data in the backend without asking the end user to perform any extra repository refresh or setup step.
+- **SC-006**: The selected UI remains simple enough for a learner to use without a complex setup and clearly communicates retrieval, evidence, and limitations.
 
 ## Assumptions
 
-- The initial users are learners, maintainers, and financial researchers; no
-  personalized investment advice is in scope.
-- RBI notifications and related tables are supplied by an authorized maintainer or
-  from a legally usable source.
-- The first release supports one clearly defined language for source interpretation;
-  the initial interface is English-first, and multilingual interpretation is a future
-  extension unless the source corpus requires it.
-- Metadata supplied by maintainers is authoritative when the source itself does not
-  provide a reliable publication month.
-- A source can be reprocessed when parsing or extraction rules improve, while prior
-  processing runs remain auditable.
-- The initial quality benchmark will use a curated corpus with reviewer-verified
-  topics, dates, questions, answers, and source locations.
-- Provider replacement means changing a compatible configured provider, not guaranteeing
-  identical wording or identical ranking for every answer.
-- Market commentary is general and educational; the feature does not collect or use
-  personal financial circumstances to generate recommendations.
-- Current market-condition commentary relies only on approved sources already indexed
-  by a maintainer. A maintainer determines whether an approved source is sufficiently
-  current; live market-data retrieval is outside this feature's scope.
-- The initial delivery runs locally on localhost. Docker packaging and Kubernetes
-  deployment are future enhancements and are not required for initial acceptance.
-- Access control and authentication are out of scope for this feature unless required
-  by the surrounding application; the feature still MUST avoid exposing secrets.
+- The repository is updated manually by maintainers and is expected to grow month by month.
+- The initial service is English-first and designed for a local or small internal deployment.
+- The system is educational and grounded in existing source material rather than external web browsing by default.
+- Retrieval quality depends on good source metadata, document structure, and a clean monthly update workflow.
+- The chatbot is intended to assist learning and analysis, not to provide personalized financial advice.

@@ -7,20 +7,17 @@ each boundary should be understandable, testable, documented, and replaceable.
 
 ## Current status
 
-The current implementation is an MVP foundation and one complete notification
-interpretation slice:
+The project now includes two local learning-first interfaces:
 
-1. Upload an RBI notification PDF in Streamlit.
-2. Preserve the submitted bytes using a SHA-256 content address.
-3. Extract page text and page-level provenance.
-4. Retrieve relevant local evidence.
-5. Produce a summary bounded by the retrieved evidence.
-6. Display topics, citations, provider names, and a learning explanation.
+1. Upload an RBI notification PDF in Streamlit and interpret it with grounded topics,
+   citations, and learning explanations.
+2. Ask a question in the monthly RBI chatbot using a local monthly repository of
+   source documents; the chatbot retrieves the most relevant monthly file, supports
+   simple semantic matching for common RBI terms, and asks for clarification when
+   multiple sources are similarly relevant.
 
-The current test suite contains 9 passing tests. The task breakdown is maintained
-in [tasks.md](specs/001-rbi-notification-intelligence/tasks.md); 25 of 74 tasks
-are currently marked complete. Do not mark a task complete until its behavior is
-implemented and validated.
+The current implementation intentionally keeps the logic easy to follow and easy to
+replace. The app remains a local demo rather than a personalized financial advisor.
 
 ## Prerequisites
 
@@ -97,6 +94,24 @@ Without activation:
 Open the localhost URL printed by Streamlit, normally
 `http://localhost:8501`.
 
+### Run the monthly RBI chatbot
+
+With the environment activated:
+
+```powershell
+streamlit run src\financial_assistant\chat_ui.py
+```
+
+Without activation:
+
+```powershell
+.\.venv\Scripts\streamlit.exe run src\financial_assistant\chat_ui.py
+```
+
+The chatbot reads monthly RBI documents from `data/monthly` by default. If the
+folder is empty, it creates a small sample repository of monthly RBI notes so the
+feature works immediately in a fresh checkout.
+
 ## Run the project locally from a fresh checkout
 
 Use the following complete sequence in PowerShell:
@@ -144,8 +159,11 @@ must not turn missing evidence into an invented source fact.
 
 ## Configuration
 
-Copy [.env.example](.env.example) to a local `.env` file only if you need to
-override defaults. Never commit `.env` or credentials.
+The chatbot uses a local monthly repository under `data/monthly` by default. The
+folder can contain `.md` or `.txt` files, such as monthly RBI notes.
+
+If the folder is empty, the code will create a small demo dataset automatically so
+that the chatbot can be tested immediately without extra setup.
 
 Supported settings:
 
@@ -163,7 +181,9 @@ integrations.
 
 ```text
 src/financial_assistant/
-├── app.py                         # Streamlit localhost entry point
+├── app.py                         # Streamlit localhost entry point for PDF interpretation
+├── chat_ui.py                     # Lightweight Streamlit UI for the monthly RBI chatbot
+├── chatbot.py                    # Monthly document loader and semantic/RAG-style answer logic
 ├── config.py                      # Environment-backed settings
 ├── domain/
 │   ├── entities.py                # Typed provenance and answer entities
@@ -176,7 +196,7 @@ src/financial_assistant/
 ├── providers/
 │   ├── llm.py                     # Language-model port and local adapter
 │   ├── embeddings.py              # Embedding port and local adapter
-│   ├── vector_store.py             # Retrieval port and local adapter
+│   ├── vector_store.py            # Retrieval port and local adapter
 │   └── factory.py                 # Provider construction
 ├── retrieval/
 │   └── search.py                  # Provider-neutral search service
@@ -187,12 +207,6 @@ src/financial_assistant/
 ├── workflows/
 │   └── notification.py            # Grounded notification workflow
 └── observability.py               # Run IDs and redaction
-
-tests/
-├── unit/
-├── contract/
-├── integration/
-└── evaluation/
 ```
 
 See [architecture.md](docs/architecture.md) for the current design rationale.
@@ -202,23 +216,19 @@ The complete product design is in [plan.md](specs/001-rbi-notification-intellige
 
 ## Recommended next work
 
-Continue in task order, starting with the remaining foundation and MVP tasks:
+1. Add richer monthly document ingestion from PDFs and tables instead of markdown
+   notes only.
+2. Connect the chatbot to the same citation and provenance model used by the RBI
+   notification workflow.
+3. Add stronger semantic retrieval, not just keyword overlap and alias matching.
+4. Expand the monthly repository to reflect real RBI documents and approved source
+   metadata.
+5. Add evaluation tests for ambiguous questions, unsupported answers, and month
+   selection.
 
-1. Add SQLite metadata persistence and Alembic migrations (`T009`, `T070`).
-2. Add deterministic sample PDF, tabular, malformed, duplicate, and conflicting
-   fixtures (`T019`).
-3. Add PDF extraction contract tests and OCR fallback (`T021`, `T024`).
-4. Add extraction-run orchestration and explicit workflow state (`T025`, `T029`).
-5. Separate the Streamlit notification UI into the planned UI modules
-   (`T031`, `T032`).
-6. Implement tabular ingestion and cross-source grounded Q&A (Phase 4).
-7. Add learning content, source management, MCP boundaries, accessibility
-   validation, and CI.
-
-Before implementing the later market and conflict tasks, reconcile the latest
-specification decisions with the older planning text: the specification uses
-maintainer judgment for market-source freshness and retrieval-score selection
-when sources conflict.
+The original notification interpretation flow remains the main grounded reporting
+use case, while the monthly chatbot is the lighter-weight Q&A experience for a
+repository of RBI documents.
 
 ## Safety and contribution rules
 
